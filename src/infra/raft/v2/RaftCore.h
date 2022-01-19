@@ -48,6 +48,8 @@ struct Peer {
   /// ip:port
   std::string mAddress;
 
+  std::string mName;
+
   /**
    * Set to true if this server has responded to our RV_req
    * in the current term, false otherwise.
@@ -269,6 +271,7 @@ class RaftCore : public RaftInterface {
   static constexpr uint64_t kBadID = 0;
 
   std::map<uint64_t, Peer> mPeers;
+  // std::map<uint64_t, PeerMetrics> mPeerMetrics;
 
   MemberInfo mSelfInfo;
 
@@ -310,6 +313,12 @@ class RaftCore : public RaftInterface {
   /// after restart, Leader/Follower will recover commitIndex from 0,
   /// ignore the flip from 0 to avoid confusing metrics
   santiago::MetricsCenter::CounterType mCommitIndexCounter;
+
+  // santiago::MetricsCenter::GaugeType mLeaderCommitIndexGauge;
+  santiago::MetricsCenter::GaugeType mMajorityIndexGauge;
+
+  // santiago::MetricsCenter::GaugeType mMatchIndexGauge;
+  // santiago::MetricsCenter::GaugeType mOffsetLagGauge;
 
   /// UT
   RaftCore(const char *configPath, TestPointProcessor *processor);

@@ -28,7 +28,8 @@ RaftCore::RaftCore(
     std::optional<std::string> clusterConfOpt,
     std::shared_ptr<DNSResolver> dnsResolver) :
     mLeadershipGauge(gringofts::getGauge("leadership_gauge", {{"status", "isLeader"}})),
-    mCommitIndexCounter(gringofts::getCounter("committed_log_counter", {{"status", "committed"}})) {
+    mCommitIndexCounter(gringofts::getCounter("committed_log_counter", {{"status", "committed"}})),
+    mMajorityIndexGauge(gringofts::getGauge("majority_index", {{"status", "majority"}})) {
   INIReader iniReader(configPath);
   if (iniReader.ParseError() < 0) {
     SPDLOG_ERROR("Can't load configure file {}, exit", configPath);
@@ -122,6 +123,7 @@ void RaftCore::initClusterConfImpl(const std::string &clusterConf,
       Peer peer;
       peer.mId = peerId;
       peer.mAddress = addr;
+      peer.mName = host;
       mPeers[peerId] = peer;
     }
   }
@@ -704,12 +706,24 @@ void RaftCore::advanceCommitIndex() {
   for (auto &p : mPeers) {
     auto &peer = p.second;
     indices.push_back(peer.mMatchIndex);
+    /// followers match index & lag
+    gringofts::getGauge("match_index", {{"address", peer.mAddress}})
+        .set(peer.mMatchIndex);
+    // gringofts::getGauge("offset_lag", {{"address", peer.mAddress}})
+    //     .set(mCommitIndex - peer.mMatchIndex);
   }
+  gringofts::getGauge("match_index", {{"address", mSelfInfo.mAddress}})
+      .set(mCommitIndex);
+  // gringofts::getGauge("offset_lag", {{"address", mSelfInfo.mAddress}})
+  //     .set(0);
 
   std::sort(indices.begin(), indices.end(),
             [](uint64_t x, uint64_t y) { return x > y; });
 
   auto majorityIndex = indices[indices.size() >> 1];
+
+  /// update current leader majority index
+  mMajorityIndexGauge.set(majorityIndex);
 
   /// commitIndex monotonically increase
   if (mCommitIndex >= majorityIndex) {
@@ -909,6 +923,19 @@ void RaftCore::stepDown(uint64_t newTerm) {
 
     /// notify monitor
     mLeadershipGauge.set(0);
+    mMajorityIndexGauge.set(0);
+
+    for (auto &p : mPeers) {
+      auto &peer = p.second;
+      auto nodeName = 
+      /// followers match index & lag
+      gringofts::getGauge("match_index", {{"address", peer.mAddress}})
+          .set(0);
+      // gringofts::getGauge("offset_lag", {{"address", peer.mAddress}});
+    }
+    gringofts::getGauge("match_index", {{"address", mSelfInfo.mAddress}})
+        .set(0);
+    // gringofts::getGauge("offset_lag", {{"address", mSelfInfo.mAddress}});     
     /// resume election timer
     updateElectionTimePoint();
   }
