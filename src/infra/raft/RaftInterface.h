@@ -43,6 +43,12 @@ struct MemberInfo {
   }
 };
 
+struct MemberOffsetInfo {
+  uint64_t mId = 0;
+  std::string mAddress;
+  uint64_t mLag = 0;
+};
+
 //////////////////////////// Client Request ////////////////////////////
 
 struct ClientRequest {
@@ -82,6 +88,7 @@ class RaftInterface {
   virtual uint64_t getLastLogIndex() const = 0;
   virtual std::optional<uint64_t> getLeaderHint() const = 0;
   virtual std::vector<MemberInfo> getClusterMembers() const = 0;
+  virtual void getInSyncFollowers(std::vector<MemberOffsetInfo> &, uint64_t) const = 0;
 
   /// used by StateMachine to read committed entry at index
   /// return true if succeed, return false if the entry is truncated.

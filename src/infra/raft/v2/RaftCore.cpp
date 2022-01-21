@@ -123,7 +123,6 @@ void RaftCore::initClusterConfImpl(const std::string &clusterConf,
       Peer peer;
       peer.mId = peerId;
       peer.mAddress = addr;
-      peer.mName = host;
       mPeers[peerId] = peer;
     }
   }
@@ -709,18 +708,15 @@ void RaftCore::advanceCommitIndex() {
     /// followers match index & lag
     gringofts::getGauge("match_index", {{"address", peer.mAddress}})
         .set(peer.mMatchIndex);
-    // gringofts::getGauge("offset_lag", {{"address", peer.mAddress}})
-    //     .set(mCommitIndex - peer.mMatchIndex);
   }
   gringofts::getGauge("match_index", {{"address", mSelfInfo.mAddress}})
       .set(mCommitIndex);
-  // gringofts::getGauge("offset_lag", {{"address", mSelfInfo.mAddress}})
-  //     .set(0);
 
   std::sort(indices.begin(), indices.end(),
             [](uint64_t x, uint64_t y) { return x > y; });
 
   auto majorityIndex = indices[indices.size() >> 1];
+  majorityIndex = majorityIndex;
 
   /// update current leader majority index
   mMajorityIndexGauge.set(majorityIndex);
@@ -927,17 +923,31 @@ void RaftCore::stepDown(uint64_t newTerm) {
 
     for (auto &p : mPeers) {
       auto &peer = p.second;
-      auto nodeName = 
       /// followers match index & lag
       gringofts::getGauge("match_index", {{"address", peer.mAddress}})
           .set(0);
-      // gringofts::getGauge("offset_lag", {{"address", peer.mAddress}});
     }
     gringofts::getGauge("match_index", {{"address", mSelfInfo.mAddress}})
         .set(0);
-    // gringofts::getGauge("offset_lag", {{"address", mSelfInfo.mAddress}});     
-    /// resume election timer
     updateElectionTimePoint();
+  }
+}
+
+void RaftCore::getInSyncFollowers(
+    std::vector<MemberOffsetInfo> &mInSyncFollowers, 
+    uint64_t threshold) const{
+  for (auto &p : mPeers) {
+    auto &peer = p.second;
+    auto lag = mMajorityIndex - peer.mMatchIndex;
+    if (lag < threshold) {
+      struct MemberOffsetInfo peerLag;
+      peerLag.mId = peer.mId;
+      peerLag.mAddress = peer.mAddress;
+      peerLag.mLag = lag;
+      mInSyncFollowers.push_back(peerLag);
+    }
+    std::sort(mInSyncFollowers.begin(), mInSyncFollowers.end(),
+          [](MemberOffsetInfo x, MemberOffsetInfo y) { return x.mId > y.mId; });
   }
 }
 

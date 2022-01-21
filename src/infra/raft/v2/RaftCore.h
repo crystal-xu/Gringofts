@@ -48,8 +48,6 @@ struct Peer {
   /// ip:port
   std::string mAddress;
 
-  std::string mName;
-
   /**
    * Set to true if this server has responded to our RV_req
    * in the current term, false otherwise.
@@ -164,6 +162,8 @@ class RaftCore : public RaftInterface {
     return mLog->truncatePrefix(firstIndexKept);
   }
 
+  void getInSyncFollowers(std::vector<MemberOffsetInfo> &, uint64_t) const override;
+
  private:
   /// init
   void initConfigurableVars(const INIReader &iniReader);
@@ -271,7 +271,6 @@ class RaftCore : public RaftInterface {
   static constexpr uint64_t kBadID = 0;
 
   std::map<uint64_t, Peer> mPeers;
-  // std::map<uint64_t, PeerMetrics> mPeerMetrics;
 
   MemberInfo mSelfInfo;
 
@@ -281,6 +280,7 @@ class RaftCore : public RaftInterface {
 
   std::atomic<uint64_t> mCommitIndex = 0;
   RaftRole mRaftRole = RaftRole::Follower;
+  std::atomic<uint64_t> mMajorityIndex = 0;
 
   /// entries, currentTerm, voteFor
   std::unique_ptr<storage::Log> mLog;
@@ -316,9 +316,6 @@ class RaftCore : public RaftInterface {
 
   // santiago::MetricsCenter::GaugeType mLeaderCommitIndexGauge;
   santiago::MetricsCenter::GaugeType mMajorityIndexGauge;
-
-  // santiago::MetricsCenter::GaugeType mMatchIndexGauge;
-  // santiago::MetricsCenter::GaugeType mOffsetLagGauge;
 
   /// UT
   RaftCore(const char *configPath, TestPointProcessor *processor);
