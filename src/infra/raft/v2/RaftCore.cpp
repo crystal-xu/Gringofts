@@ -934,7 +934,7 @@ void RaftCore::stepDown(uint64_t newTerm) {
 }
 
 void RaftCore::getInSyncFollowers(
-    std::vector<MemberOffsetInfo> &mInSyncFollowers, 
+    std::vector<MemberOffsetInfo> *mInSyncFollowers, 
     uint64_t threshold) const{
   for (auto &p : mPeers) {
     auto &peer = p.second;
@@ -944,9 +944,9 @@ void RaftCore::getInSyncFollowers(
       peerLag.mId = peer.mId;
       peerLag.mAddress = peer.mAddress;
       peerLag.mLag = lag;
-      mInSyncFollowers.push_back(peerLag);
+      mInSyncFollowers->push_back(peerLag);
     }
-    std::sort(mInSyncFollowers.begin(), mInSyncFollowers.end(),
+    std::sort(mInSyncFollowers->begin(), mInSyncFollowers->end(),
           [](MemberOffsetInfo x, MemberOffsetInfo y) { return x.mId > y.mId; });
   }
 }
