@@ -716,7 +716,7 @@ void RaftCore::advanceCommitIndex() {
             [](uint64_t x, uint64_t y) { return x > y; });
 
   auto majorityIndex = indices[indices.size() >> 1];
-  majorityIndex = majorityIndex;
+  mMajorityIndex = majorityIndex;
 
   /// update current leader majority index
   mMajorityIndexGauge.set(majorityIndex);
