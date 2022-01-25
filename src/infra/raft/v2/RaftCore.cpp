@@ -935,10 +935,10 @@ void RaftCore::stepDown(uint64_t newTerm) {
 
 void RaftCore::getInSyncFollowers(
     std::vector<MemberOffsetInfo> *mInSyncFollowers, 
-    uint64_t threshold) const{
+    int64_t threshold) const{
   for (auto &p : mPeers) {
     auto &peer = p.second;
-    auto lag = mMajorityIndex - peer.mMatchIndex;
+    int64_t lag = mMajorityIndex - peer.mMatchIndex;
     if (lag < threshold) {
       struct MemberOffsetInfo peerLag;
       peerLag.mId = peer.mId;
