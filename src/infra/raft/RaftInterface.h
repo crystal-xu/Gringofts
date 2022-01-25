@@ -88,7 +88,7 @@ class RaftInterface {
   virtual uint64_t getLastLogIndex() const = 0;
   virtual std::optional<uint64_t> getLeaderHint() const = 0;
   virtual std::vector<MemberInfo> getClusterMembers() const = 0;
-  virtual void getInSyncFollowers(std::vector<MemberOffsetInfo> *, int64_t) const = 0;
+  virtual void getInSyncFollowers(const int64_t &, std::vector<MemberOffsetInfo> *) const = 0;
 
   /// used by StateMachine to read committed entry at index
   /// return true if succeed, return false if the entry is truncated.

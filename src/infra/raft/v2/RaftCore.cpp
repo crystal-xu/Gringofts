@@ -933,9 +933,9 @@ void RaftCore::stepDown(uint64_t newTerm) {
   }
 }
 
-void RaftCore::getInSyncFollowers(
-    std::vector<MemberOffsetInfo> *mInSyncFollowers, 
-    int64_t threshold) const{
+void RaftCore::getInSyncFollowers( 
+    const int64_t &threshold,
+    std::vector<MemberOffsetInfo> *mInSyncFollowers) const{
   for (auto &p : mPeers) {
     auto &peer = p.second;
     int64_t lag = mMajorityIndex - peer.mMatchIndex;

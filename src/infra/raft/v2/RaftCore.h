@@ -162,7 +162,7 @@ class RaftCore : public RaftInterface {
     return mLog->truncatePrefix(firstIndexKept);
   }
 
-  void getInSyncFollowers(std::vector<MemberOffsetInfo> *, int64_t) const override;
+  void getInSyncFollowers(const int64_t &, std::vector<MemberOffsetInfo> *) const override;
 
  private:
   /// init
