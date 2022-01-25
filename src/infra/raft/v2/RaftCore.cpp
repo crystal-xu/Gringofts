@@ -939,7 +939,7 @@ void RaftCore::getInSyncFollowers(
   for (auto &p : mPeers) {
     auto &peer = p.second;
     int64_t lag = mMajorityIndex - peer.mMatchIndex;
-    if (lag < threshold) {
+    if (lag <= threshold) {
       struct MemberOffsetInfo peerLag;
       peerLag.mId = peer.mId;
       peerLag.mAddress = peer.mAddress;
