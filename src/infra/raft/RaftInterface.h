@@ -47,6 +47,9 @@ struct MemberOffsetInfo {
   uint64_t mId = 0;
   std::string mAddress;
   int64_t mLag = 0;
+  std::string toString() const {
+    return std::to_string(mId) + "@" + mAddress;
+  }
 };
 
 //////////////////////////// Client Request ////////////////////////////
