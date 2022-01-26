@@ -28,7 +28,8 @@ RaftCore::RaftCore(
     std::optional<std::string> clusterConfOpt,
     std::shared_ptr<DNSResolver> dnsResolver) :
     mLeadershipGauge(gringofts::getGauge("leadership_gauge", {{"status", "isLeader"}})),
-    mCommitIndexCounter(gringofts::getCounter("committed_log_counter", {{"status", "committed"}})) {
+    mCommitIndexCounter(gringofts::getCounter("committed_log_counter", {{"status", "committed"}})),
+    mMajorityIndexGauge(gringofts::getGauge("majority_index", {{"status", "majority"}})) {
   INIReader iniReader(configPath);
   if (iniReader.ParseError() < 0) {
     SPDLOG_ERROR("Can't load configure file {}, exit", configPath);
@@ -704,12 +705,21 @@ void RaftCore::advanceCommitIndex() {
   for (auto &p : mPeers) {
     auto &peer = p.second;
     indices.push_back(peer.mMatchIndex);
+    /// followers match index & lag
+    gringofts::getGauge("match_index", {{"address", peer.mAddress}})
+        .set(peer.mMatchIndex);
   }
+  gringofts::getGauge("match_index", {{"address", mSelfInfo.mAddress}})
+      .set(mCommitIndex);
 
   std::sort(indices.begin(), indices.end(),
             [](uint64_t x, uint64_t y) { return x > y; });
 
   auto majorityIndex = indices[indices.size() >> 1];
+  mMajorityIndex = majorityIndex;
+
+  /// update current leader majority index
+  mMajorityIndexGauge.set(majorityIndex);
 
   /// commitIndex monotonically increase
   if (mCommitIndex >= majorityIndex) {
@@ -909,8 +919,35 @@ void RaftCore::stepDown(uint64_t newTerm) {
 
     /// notify monitor
     mLeadershipGauge.set(0);
-    /// resume election timer
+    mMajorityIndexGauge.set(0);
+
+    for (auto &p : mPeers) {
+      auto &peer = p.second;
+      /// followers match index & lag
+      gringofts::getGauge("match_index", {{"address", peer.mAddress}})
+          .set(0);
+    }
+    gringofts::getGauge("match_index", {{"address", mSelfInfo.mAddress}})
+        .set(0);
     updateElectionTimePoint();
+  }
+}
+
+void RaftCore::getInSyncFollowers( 
+    const int64_t &threshold,
+    std::vector<MemberOffsetInfo> *mInSyncFollowers) const{
+  for (auto &p : mPeers) {
+    auto &peer = p.second;
+    int64_t lag = mMajorityIndex - peer.mMatchIndex;
+    if (lag <= threshold) {
+      struct MemberOffsetInfo peerLag;
+      peerLag.mId = peer.mId;
+      peerLag.mAddress = peer.mAddress;
+      peerLag.mLag = lag;
+      mInSyncFollowers->push_back(peerLag);
+    }
+    std::sort(mInSyncFollowers->begin(), mInSyncFollowers->end(),
+          [](MemberOffsetInfo x, MemberOffsetInfo y) { return x.mId > y.mId; });
   }
 }
 
