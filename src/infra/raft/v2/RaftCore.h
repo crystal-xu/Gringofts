@@ -179,7 +179,9 @@ class RaftCore : public RaftInterface {
     return mLog->truncatePrefix(firstIndexKept);
   }
 
- private:
+  void getInSyncFollowers(const int64_t &, std::vector<MemberOffsetInfo> *) const override;
+
+private:
   /// init
   void initConfigurableVars(const INIReader &iniReader);
   void initClusterConf(const ClusterInfo &clusterInfo, const NodeId &selfId);
@@ -297,6 +299,7 @@ class RaftCore : public RaftInterface {
   uint64_t mBeginIndex = 1;
 
   RaftRole mRaftRole = RaftRole::Follower;
+  std::atomic<uint64_t> mMajorityIndex = 0;
 
   /// entries, currentTerm, voteFor
   std::unique_ptr<storage::Log> mLog;
@@ -331,6 +334,8 @@ class RaftCore : public RaftInterface {
   /// after restart, Leader/Follower will recover commitIndex from 0,
   /// ignore the flip from 0 to avoid confusing metrics
   santiago::MetricsCenter::CounterType mCommitIndexCounter;
+
+  santiago::MetricsCenter::GaugeType mMajorityIndexGauge;
 
   /// UT
   RaftCore(
